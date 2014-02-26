@@ -660,7 +660,6 @@ git checkout <branchname>
 
 # Create a branch and check it out
 
-~~~
 git checkout -b <branchname>
 ~~~
 
@@ -691,7 +690,6 @@ git merge <branchname>
 # 2. pull in changes from another branch
 git checkout <branch1>  " e.g. master
 git merge <branch2>     " e.g. testing
-
 ~~~
 
 Merging:
@@ -715,7 +713,6 @@ git branch --no-merged
 
 # show branches that have been merged into the current branch
 git branch --merged
-
 ~~~
 
 ### Merging conflicts
