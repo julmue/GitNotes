@@ -1,5 +1,9 @@
 # GIT
 
+small private abstract for git. sources are:
+[the git book](http://git-scm.com/book)
+[successfull git branching model](http://nvie.com/posts/a-successful-git-branching-model/)
+
 <!-- ----------------------------------------------------------------------- -->
 <!-- ----------------------------------------------------------------------- -->
 
@@ -540,15 +544,274 @@ do work without interfering with that main line.
 The leightweight branching model of __Git__ is its "killer" feature.
 A workflow with branching and merging on a daily basis is common.
 
+### What is a branch?
+
+__Git__ stores data as a series of snapshots.
+
+A commit object in __Git__ stores:
+
+* a pointer to the snapshot of the content of the commit
+* author and message metadata
+* zero or more pointers to the commits that where direct parents to this commit:
+    * 0 parents for the initial commit
+    * 1 parent for a regular commit
+    * multiple parents for a commit that is the result of a merge of two or more branches
+
+~~~
+            commit                                 snapshot (tree + blobs)
+                              ........................................................
+                              :
+            98c63...          :                                         55e37...
+    COMMIT    | size          :                                 |==> blob |   size
+    ----------------------    :             9e5f7...            |    -----------------
+    tree      | 9e5f7...      :      TREE | size                |         DATA
+    ----------------------    :      -----------------------    |
+    author    | fooman      ======>  blob | 55e37 | foo1.bar    |
+    ----------------------    :      -----------------------    |==>  blob |   size
+    committer | fooman        :      blob | 923ab | foo2.bar    |     ----------------
+    ----------------------    :      -----------------------    |         ....
+    this is a first commit    :       ... |  ...  |  ...        |
+                              :
+                              :
+                              ........................................................
+
+~~~
+
+After a some commits:
+
+
+~~~
+          98c63...                   e3f56d...                  ab88c6...
+
+    COMMIT    | size            COMMIT    | size            COMMIT    | size
+    ------------------          ------------------          ------------------
+    tree      | 9e5f7           tree      | 673aa           tree      | bdf35d
+    ------------------          ------------------          ------------------
+    author    | fooman  ------> author    | fooman  ------> author    | fooman
+    ------------------          ------------------          ------------------
+    committer | fooman          committer | fooman          committer | fooman
+    ------------------          ------------------          ------------------
+    this is a first c.          this is a sec. c.           this is a third c.
+           _                            _                           _
+           |                            |                           |
+           |                            |                           |
+           V                            V                           V
+    -----------------           -----------------           -----------------
+    |               |           |               |           |               |
+    |   snapshot A  |           |   snapshot B  |           |   snapshot C  |
+    |               |           |               |           |               |
+    -----------------           -----------------           -----------------
+
+~~~
+
+A branch is a movable pointer to one of the commits. It moves foreward with
+every commit. Creating a new branch creates a new pointer to move around.
+HEAD is a special pointer to the current local branch.
+
+
+~~~
+                                                            -----------------
+                                                            |               |
+                                                            |  HEAD         |
+                                                            |               |
+                                                            -----------------
+                                                                   |
+                                                                   |
+                                                                   v
+                                                            -----------------
+                                                            |               |
+                                                            |   MASTER      |
+                                                            |               |
+                                                            -----------------
+                                                                   |
+                                                                   |
+                                                                   V
+    -----------------           -----------------           -----------------
+    |               |           |               |           |               |
+    |   98c63...    | --------> |   e3f56d...   | --------> |   ab88c6...   |
+    |               |           |               |           |               |
+    -----------------           -----------------           -----------------
+            |                           |                          |
+       snapshot A                  snapshot B                 snapshot C
+                                                                   ^
+                                                                   |
+                                                                   |
+                                                            -----------------
+                                                            |               |
+                                                            |   testing     |
+                                                            |               |
+                                                            -----------------
+
+~~~
+
+
+### Creating a branch:
+
+~~~
+git branch <branchname>
+~~~
+
+### Checking out a branch
+
+Checking out a branch moves the HEAD pointer.
+
+~~~
+git checkout <branchname>
+
+# Create a branch and check it out
+
+~~~
+git checkout -b <branchname>
+~~~
+
+
+### Deleting a branch
+
+~~~
+git branch -d <branchname>
+~~~
+
+
+If the working area or staging area has uncommitted changes that conflict with the branch
+that is to be checked out __Git__ refuses to switch branches.
+It's best to have clean work state when switching branches.
+Alternatives: stashing, commit amending
+
+When checking out a branch __Git__ resets the working directory to look like the
+snapshot of the commit that the checked-out branch points to.
+It adds, removes and modifies files automatically.
+
+
+### Merging a branch
+
+~~~
+git merge <branchname>
+
+# 1. checkout branch you wish to merge into
+# 2. pull in changes from another branch
+git checkout <branch1>  " e.g. master
+git merge <branch2>     " e.g. testing
+
+~~~
+
+Merging:
+
+* Fast-forward: When merging a branch that is directly upstream (can be reached through the commits history) __Git__ moves the pointer forward.
+* Three-Way-Merge: two branches have a common ancestor as a merge-base; __Git__ creates a new commit that has more than one ancestor as
+  a result of the merging operatrion.
+
+
+### Branch management
+
+~~~
+# show all branches
+git branch
+
+# show the last commit on each branch
+git branch -v
+
+# show branches that are not merged into the current branch
+git branch --no-merged
+
+# show branches that have been merged into the current branch
+git branch --merged
+
+~~~
+
+### Merging conflicts
+
+* Changes in the same part of a file on different branches -- __Git__ is unable to resolve the conflict.
 
 
 
+## Branching Workflows
+
+### Modell 1:
 
 
+One central repo (origin). Every developer pulls and pushes to that repo.
+Every developer may also pull from members of sub-teams.
+
+#### The main branches:
+
+* origin/master: production ready state
+* origin/develop: latest delivered development features for the next release.
+  Integration branch (nightly builds form here). Each time it is merged into master: new release.
+
+#### Support branches:
+
+Variety of supporting branches. These branches have a limited lifetime.
+
+* Feature branch
+* Release branch
+* Hotfix branch
+
+Each of this branches have a specific purpose and are bound to strict rules
+for origin branch and merge target.
+
+Branch: Feature
+parent: develop
+target: develop
+naming: anything except master, develop, release-*, hotfix-*
+
+Branches used to develop new features for future releases.
+Exist as long as the feature is in development. Will eventually
+be merged back into develop or discarded.
+
+Feature branches typically exist in developer repos not in origin.
+
+Creating a feature branch:
+
+~~~
+git checkout -b myfeature develop
+~~~
+
+Incooperating a finished feature into development:
+
+~~~
+git checkout development
+git merge --no-ff myfeature
+git branch -d myfeature
+git push origin develop
+~~~
+
+`--no-ff` flag causes merge to a alway create a new commit object, even if the merge could be performed with
+fast-forward. Avoids loosing information of the history of a feature.
 
 
+Branch: Hotfix
+parent: master
+target: master and develop
+naming: hotfix-
 
+Hotfix branches are to fix bugs in a living release.
 
+creating the hotfix branch:
+
+~~~
+git checkout -b hotfix-1.1.1 master
+# now bump version number (shellscript?)
+git commit -a -m "bumped version number to 1.1.1"
+~~~
+
+Fix bug and commit fix in one or more commits
+
+~~~
+git commit -m "fixed production problem"
+~~~
+
+Finishing a hotfix branch
+
+~~~
+## merge in master
+git checkout master
+git merge --no-ff hotfix-1.1.1
+git tag -a 1.1.1
+# merge in develop
+git checkout develop
+git merge --no-ff hotfix-1.1.1
+git branch -d hotfix-1.1.1
+~~~
 
 
 
